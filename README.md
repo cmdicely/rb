@@ -1,6 +1,6 @@
 # rb
 
-With 10 lines of Ruby replace most of the command line tools that you use to process text inside of the terminal.
+With 9 lines of Ruby replace most of the command line tools that you use to process text inside of the terminal.
 
 
 
@@ -8,6 +8,7 @@ Here's the code
 
 ```ruby
 #!/usr/bin/env ruby
+File.join(Dir.home, '.rbrc').tap { |f| load f if File.exists?(f) }
 
 def execute(_, code)
   puts _.instance_eval(&code)
@@ -15,9 +16,8 @@ rescue Errno::EPIPE
   exit
 end
 
-single_line = ARGV[0] == '-l'
-expr = ARGV.drop(single_line ? 1 : 0).join(' ')
-code = eval("Proc.new { #{expr} }")
+single_line = ARGV.delete('-l')
+code = eval("Proc.new { #{ARGV.join(' ')} }")
 single_line ? STDIN.each { |l| execute(l.chomp, code) } : execute(STDIN.each_line, code)
 ```
 
@@ -85,9 +85,29 @@ sudo curl https://raw.githubusercontent.com/thisredone/rb/master/rb -o /usr/loca
 ###### Count files by their extension
 
 ```shell
-> find . -type f | rb -l File.extname self | rb 'group_by(&:itself).map { |ext, o| "#{ext.chomp}: #{o.size}" }'
+> find . -type f | rb 'group_by(&File.method(:extname)).map { |ext, o| "#{ext.chomp}: #{o.size}" }'
 
 # : 3
 # .rb: 19
 # .md: 1
+```
+
+
+
+## Extending rb
+
+The `~/.rbrc` file is loaded if it's available. Anything defined in there will be available inside `rb` scripts.
+
+```ruby
+# ~/.rbrc
+
+class String
+  def black; "\033[30m#{self}\033[0m" end
+  def red;   "\033[31m#{self}\033[0m" end
+end
+```
+
+
+```shell
+> ls | rb first.red
 ```
